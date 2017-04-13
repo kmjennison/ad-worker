@@ -1,16 +1,51 @@
+
+var mockAds = true;
+
+var window;
+var document;
+var initialized = false;
+
 onmessage = function(e) {
+  var data = e.data.data;
   switch (e.data.type) {
+
+    case 'init':
+
+      // Set pseudoclones of window objects. These are needed for header
+      // bidding.
+      window = data.window;
+      document = data.document;
+
+      // Load the header bidding wrapper.
+      importScripts('bid-fetcher.js');
+
+      initialized = true;
+      sendMessage('initConfirm');
+
     case 'fetchAds':
+      if (!initialized) {
+        console.error('Worker not initialized.');
+        return;
+      }
       var config = e.data;
-      console.log('Worker received request to fetch ads.', config);
-      fetchAds(config);
+
+      mockAds ? fetchMockAds() : fetchAds(config);
       break;
+
     default:
-      console.warn('Worker sent unhandled message type.', e.data.type);
+      console.warn('Worker received an unhandled message type.', e.data.type);
   }
 }
 
-function mockAdResponse(config) {
+function sendMessage(type, data={}) {
+  console.log('Worker: sending "' + type + '" with data:', data);
+  postMessage({
+    type: type,
+    data: data,
+  });
+}
+
+function mockAdResponse() {
   return {
     ads: {
       'div-gpt-ad-1464385742501-0': {
@@ -23,10 +58,18 @@ function mockAdResponse(config) {
   }
 }
 
+function fetchMockAds() {
+  var adResponse = mockAdResponse();
+  sendAdResponse(adResponse);
+}
+
+function sendAdResponse(adResponse) {
+  sendMessage('adResponse', adResponse);
+}
+
 function fetchAds(config) {
-  var adResponse = mockAdResponse(config);
-  postMessage({
-    type: 'adResponse',
-    data: adResponse,
+  console.log('Fetching ads from bidder.');
+  fetcher.fetchAds(function(adResponse) {
+    console.log('Ad response:', adResponse);
   });
 }
