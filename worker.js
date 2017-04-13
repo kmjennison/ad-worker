@@ -1,5 +1,5 @@
 
-var mockAds = true;
+var mockAds = false;
 
 var window;
 var document;
@@ -7,8 +7,8 @@ var initialized = false;
 
 onmessage = function(e) {
   var data = e.data.data;
-  switch (e.data.type) {
 
+  switch (e.data.type) {
     case 'init':
 
       // Set pseudoclones of window objects. These are needed for header
@@ -21,15 +21,20 @@ onmessage = function(e) {
 
       initialized = true;
       sendMessage('initConfirm');
+      break;
 
     case 'fetchAds':
       if (!initialized) {
         console.error('Worker not initialized.');
         return;
       }
-      var config = e.data;
+      var config = data;
 
-      mockAds ? fetchMockAds() : fetchAds(config);
+      if (mockAds) {
+        fetchMockAds();
+      } else {
+        fetchAds(config);
+      }
       break;
 
     default:
