@@ -1,27 +1,48 @@
-var first = document.querySelector('#number1');
-var second = document.querySelector('#number2');
+(function() {
 
-var result = document.querySelector('.result');
+if (window.Worker) {
 
-if (window.Worker) { // Check if Browser supports the Worker api.
-  // Requires script name as input
-  var myWorker = new Worker("worker.js");
+  // No config set, so don't fetch ads.
+  if (!window || !window.adWorker || !window.adWorker.config) {
+    console.log('AdWorker config not set.');
+    return;
+  }
 
-// onkeyup could be used instead of onchange if you wanted to update the answer every time
-// an entered value is changed, and you don't want to have to unfocus the field to update its .value
+  var myWorker = new Worker('worker.js');
 
-  first.onchange = function() {
-    myWorker.postMessage([first.value,second.value]); // Sending message as an array to the worker
-    console.log('Message posted to worker');
-  };
+  // Tell the worker to fetcha ads.
+  myWorker.postMessage({
+    type: 'fetchAds',
+    data: adWorker.config,
+  });
 
-  second.onchange = function() {
-    myWorker.postMessage([first.value,second.value]);
-    console.log('Message posted to worker');
-  };
-
+  // Handle messages from the worker.
   myWorker.onmessage = function(e) {
-    result.textContent = e.data;
-    console.log('Message received from worker');
+    switch (e.data.type) {
+      case 'adResponse':
+        var adResponse = e.data;
+        console.log('Worker sent ad response:', adResponse);
+        renderAds(adResponse);
+        break;
+      default:
+        console.warn('Worker sent unhandled message');
+    }
   };
+
+} else {
+  console.error('Browser does not support workers.');
 }
+
+function renderAds(adResponse) {
+  if (!adResponse.data || !adResponse.data.ads) {
+    console.log('No ad responses.');
+    return;
+  }
+  for (var slotId in adResponse.data.ads) {
+    var container = document.getElementById(slotId);
+    container.innerHTML = adResponse.data.ads[slotId].ad;
+    console.log(container);
+  }
+}
+
+})();
